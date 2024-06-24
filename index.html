@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #555;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .sensor {
+            width: 45%;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        .realtime {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center; /* Posisi ke tengah */
+        }
+        .realtime h2 {
+            color: #555;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        .realtime .data {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .realtime .data .emoji {
+            font-size: 2em;
+            margin-right: 10px;
+        }
+        .realtime .data p {
+            font-size: 1.2em;
+            color: #666;
+            margin: 0;
+        }
+        .realtime .data .unit {
+            font-size: 1.2em;
+            color: #666;
+            margin-left: 5px; /* Tambahkan margin kiri untuk spasi */
+        }
+        .chart-container {
+            display: none; /* Mulai dengan grafik disembunyikan */
+            height: 300px;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .toggle-buttons {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .toggle-buttons button {
+            margin: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+        .toggle-buttons button:hover {
+            background-color: #45a049;
+        }
+        .log {
+            display: none;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+        .log table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .log th, .log td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .log th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sensor Dashboard</h1>
+    <div class="container">
+        <div class="sensor">
+            <div class="realtime">
+                <h2>Realtime Pembacaan Sensor </h2>
+                <div id="realtime-data">
+                    <div class="data">
+                        <span class="emoji">&#x2764;&#xFE0F;</span>
+                        <p class="current-suhu">-</p><span class="unit"> BPM</span>
+                    </div>
+                    <div class="data">
+                        <span class="emoji">&#x1F321;</span>
+                        <p class="current-detak">-</p><span class="unit"> °C</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="sensorChart"></canvas>
+                </div>
+                <div class="toggle-buttons">
+                    <button id="toggle-log">Log</button>
+                    <button id="toggle-graph">Grafik</button>
+                </div>
+            </div>
+            <div class="log" id="log">
+                <h3>Log Pembacaan Sensor</h3>
+                <table id="log-table">
+                    <thead>
+                        <tr>
+                            <th>Waktu</th>
+                            <th>Detak Jantung (BPM)</th>
+                            <th>Suhu (°C)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-data">
+                        <!-- Data akan dimasukkan oleh JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript untuk simulasi data dan fungsi toggle -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.24.0/axios.min.js"></script>
+    <script>
+        // Replace with your ThingSpeak channel details
+        const channelID = '2584280';
+        const apiKey = 'JJQYS4NHTTRXUHTW';
+
+        // Data untuk simulasi grafik
+        let labels = [];
+        let suhuData = [];
+        let detakJantungData = [];
+
+        // Initialize chart
+        let ctx = document.getElementById('sensorChart').getContext('2d');
+        let sensorChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Detak Jantung (BPM)',
+                    data: suhuData,
+                    borderColor: '#2196F3',
+                    borderWidth: 2,
+                    fill: false
+                }, {
+                    label: 'Suhu (°C)',
+                    data: detakJantungData,
+                    borderColor: '#FF5722',
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+
+        // Toggle log visibility
+        document.getElementById('toggle-log').addEventListener('click', function() {
+            const logElement = document.getElementById('log');
+            logElement.style.display = (logElement.style.display === 'none') ? 'block' : 'none';
+        });
+
+        // Toggle chart visibility
+        document.getElementById('toggle-graph').addEventListener('click', function() {
+            const chartContainer = document.querySelector('.chart-container');
+            const logElement = document.getElementById('log');
+            
+            if (chartContainer.style.display === 'none') {
+                chartContainer.style.display = 'block';
+                logElement.style.display = 'none'; // Sembunyikan log jika grafik ditampilkan
+            } else {
+                chartContainer.style.display = 'none';
+            }
+        });
+
+        // Fungsi untuk update log pembacaan sensor dalam bentuk tabel
+// Fungsi untuk update log pembacaan sensor dalam bentuk tabel
+function updateLogTable(suhu, detakJantung) {
+    const logTable = document.getElementById('log-table');
+    const logData = document.getElementById('log-data');
+
+    // Buat baris baru
+    const newRow = logData.insertRow(0);
+
+    // Buat sel untuk waktu
+    const timeCell = newRow.insertCell(0);
+    timeCell.textContent = new Date().toLocaleTimeString();
+
+    // Buat sel untuk suhu
+    const suhuCell = newRow.insertCell(1);
+    suhuCell.textContent = suhu + ' BPM';
+
+    // Buat sel untuk detak jantung
+    const detakCell = newRow.insertCell(2);
+    detakCell.textContent = detakJantung + ' °C';
+}
+
+
+        // Function to fetch data from ThingSpeak and update dashboard
+        // Function to fetch data from ThingSpeak and update dashboard
+async function fetchDataAndUpdateDashboard() {
+    try {
+        const url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${apiKey}&results=1`;
+
+        const response = await axios.get(url);
+
+        if (response.data && response.data.feeds && response.data.feeds.length > 0) {
+            const latestData = response.data.feeds[0];
+
+            const suhu = parseFloat(latestData.field1);
+            const detakJantung = parseFloat(latestData.field2);
+
+            // Update real-time data display
+            if (!isNaN(suhu)) {
+                document.querySelector('.current-suhu').textContent = suhu.toFixed(1);
+            }
+            if (!isNaN(detakJantung)) {
+                document.querySelector('.current-detak').textContent = detakJantung.toFixed(0);
+            }
+
+            // Update log pembacaan sensor
+            updateLogTable(suhu.toFixed(1), detakJantung.toFixed(0));
+
+            // Update chart
+            labels.push(new Date().toLocaleTimeString());
+            suhuData.push(suhu.toFixed(1));
+            detakJantungData.push(detakJantung.toFixed(0));
+
+            if (labels.length > 7) {
+                labels.shift();
+                suhuData.shift();
+                detakJantungData.shift();
+            }
+
+            sensorChart.update();
+        } else {
+            console.log('No data available');
+        }
+    } catch (error) {
+        console.error('Error fetching data:', error);
+    }
+}
+
+
+        // Call fetchDataAndUpdateDashboard periodically
+        setInterval(fetchDataAndUpdateDashboard, 5000); // Fetch data every 5 seconds initially
+        fetchDataAndUpdateDashboard(); // Call immediately on page load
+    </script>
+</body>
+</html>
